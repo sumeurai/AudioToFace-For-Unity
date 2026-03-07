@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 59b1ec27fa2b7214e8340d675ac9bd32, type: 3}
   m_Name: APISettingsConfig
   m_EditorClassIdentifier: 
-  accessKey: sZ74UPYg42uuDZWp
-  secretKey: DZLkV0N58V9dthdJ4rIiqJI0Er8B6WMM
-  baseUrl: https://overseas.sumeruai.com/
-  login: open-api/platform/access/auth
-  atfMesh: open-api/platform/atf/mesh
+  accessKey: VIBMXYQm30zCxLqu
+  secretKey: O3CGCoSCQjDgy6tAB6SrT06XrMBenYhB
+  baseUrl: https://api.sumeruai.us/
+  login: v1/access/auth
+  atfMesh: v1/audio-to-face/mesh

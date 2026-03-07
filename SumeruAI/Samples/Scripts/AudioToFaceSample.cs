@@ -86,6 +86,11 @@ public class AudioToFaceSample : MonoBehaviour
 #if UNITY_EDITOR
         string filepath = EditorUtility.OpenFilePanel("select wav file", "", "wav");
 
+        if (string.IsNullOrEmpty(filepath))
+        {
+            return;
+        }
+
         byte[] wavBytes = File.ReadAllBytes(filepath);
 
         string base64 = Convert.ToBase64String(wavBytes);
