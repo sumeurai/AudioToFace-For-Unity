@@ -6,7 +6,7 @@ Audio-to-3D Face SDK for Unity enables developers to generate real-time 3D facia
 
 ---
 
-https://github.com/user-attachments/assets/0d612e0c-8818-493b-8e19-5ced8a774c71
+https://github.com/user-attachments/assets/491d7d98-b6d3-46f0-9da7-aa770689b905
 
 ## 🎯 Features
 
