@@ -123,7 +123,8 @@ namespace SumeruAI.API
 
             LoginReqData reqData = new LoginReqData();
             reqData.accessKey = APISettingsConfig.Instance.AccessKey;
-            reqData.secretKey = ComputeStringMD5(APISettingsConfig.Instance.SecretKey);
+            // reqData.secretKey = ComputeStringMD5(APISettingsConfig.Instance.SecretKey);
+            reqData.secretKey = APISettingsConfig.Instance.SecretKey;
 
             Request<LoginReqData, LoginRepData>(APISettingsConfig.Instance.LoginUrl,reqData, (repData) =>
             {

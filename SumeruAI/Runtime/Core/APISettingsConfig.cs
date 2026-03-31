@@ -31,12 +31,12 @@ namespace SumeruAI.API
 
         public string LoginUrl
         {
-            get { return Path.Combine(baseUrl, login); }
+            get { return CombineUrl(baseUrl, login); }
         }
 
         public string ATFMeshUrl
         {
-            get { return Path.Combine(baseUrl, atfMesh); }
+            get { return CombineUrl(baseUrl, atfMesh); }
         }
 
 
@@ -68,7 +68,13 @@ namespace SumeruAI.API
             return !string.IsNullOrEmpty(accessKey) && !string.IsNullOrEmpty(secretKey);
         }
 
+        protected string CombineUrl(string url, string path)
+        {
+            if (string.IsNullOrEmpty(url)) return path;
+            if (string.IsNullOrEmpty(path)) return url;
 
+            return $"{url.TrimEnd('/')}/{path.TrimStart('/')}";
+        }
 
 #if UNITY_EDITOR
 

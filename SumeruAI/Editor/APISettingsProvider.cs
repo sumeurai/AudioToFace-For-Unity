@@ -16,7 +16,7 @@ namespace SumeruAI.Editor
         private string accessKey;
         private string secretKey;
 
-        private bool hasConfig;
+        private bool hasConfigAsset;
 
         public APISettingsProvider(string path, SettingsScope scopes) : base(path, scopes)
         {
@@ -41,9 +41,9 @@ namespace SumeruAI.Editor
             base.OnActivate(searchContext, rootElement);
 
             APISettingsConfig config = APISettingsConfig.Instance;
-            hasConfig = config.IsValid();
+            hasConfigAsset = config != null && EditorUtility.IsPersistent(config);
 
-            if (hasConfig)
+            if (hasConfigAsset)
             {
                 accessKey = config.AccessKey;
                 secretKey = config.SecretKey;
@@ -73,9 +73,9 @@ namespace SumeruAI.Editor
             GUILayout.Space(10);
 
             // Warning Box
-            if (!hasConfig)
+            if (!hasConfigAsset)
             {
-                EditorGUILayout.HelpBox("No Config in Resources Folder. Please configure your API credentials.", MessageType.Warning);
+                EditorGUILayout.HelpBox("No API settings asset was found in a Resources folder. Please create one and configure your API credentials.", MessageType.Warning);
                 GUILayout.Space(10);
             }
 
@@ -102,7 +102,7 @@ namespace SumeruAI.Editor
                     return;
                 }
 
-                if (!hasConfig)
+                if (!hasConfigAsset)
                 {
                     string folder = EditorUtility.OpenFolderPanel("Save Settings", "Assets", "");
                     string relativePath = FileUtil.GetProjectRelativePath(folder);
@@ -160,7 +160,7 @@ namespace SumeruAI.Editor
                     config.SetAccessKeyAndSecretKeyFromEditor(accessKey, secretKey);
                     AssetDatabase.CreateAsset(config, filename);
                     AssetDatabase.SaveAssets();
-                    hasConfig = true;
+                    hasConfigAsset = true;
                 }
                 else
                 {

@@ -1,4 +1,4 @@
-﻿# AudioToFace-For-Unity
+# AudioToFace-For-Unity
 
 Audio-to-3D Face SDK for Unity enables developers to generate real-time 3D facial animations from speech audio using our AI-powered API. Simply feed in an audio clip or audio stream, and the SDK returns a sequence of facial blendshape coefficients that can be applied to any 3D character model — bringing your avatars to life with natural, speech-synchronized expressions.
 
@@ -20,8 +20,9 @@ https://github.com/user-attachments/assets/491d7d98-b6d3-46f0-9da7-aa770689b905
 
 1. **Open the project** in Unity (2020.3+ recommended).
 2. **Configure the APISettingsConfig asset** (a default configuration is provided for demonstration; you can either modify it directly or create your own):
-   - **Option A**: Modify the default configuration at `Assets/SumeruAI/Resources` – fill in your `Access Key`, `Secret Key`, and the base URL plus relative paths for `login` and `atfMesh`.
-   - **Option B**: Create a new configuration – in the Project window, `Right-click → Create → SumeruAI → API Settings Config`, then fill in the required API credentials and paths.
+   - Get your `Access Key` and `Secret Key` from the `Developers` page at `https://www.sumeruai.us/`.
+   - **Option A**: Modify the default configuration at `Assets/SumeruAI/Resources` – fill in the `Access Key`, `Secret Key`, and the base URL plus relative paths for `login` and `atfMesh`.
+   - **Option B**: Create a new configuration – in the Project window, `Right-click → Create → SumeruAI → API Settings Config`, then fill in the required API credentials and paths from the `Developers` page.
    - The asset must reside under a `Resources` folder so it can be loaded at runtime.
 
 3. **Scene preparation**:
