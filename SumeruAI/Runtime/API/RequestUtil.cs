@@ -32,26 +32,12 @@ namespace SumeruAI.API
     [Serializable]
     public class ATFReqData
     {
-        /// <summary>
-        /// start middle end
-        /// </summary>
-        public string status;
+        public string traceId;
 
         /// <summary>
         /// audio base64
         /// </summary>
-        public string dialogueBase64;
-
-        /// <summary>
-        /// pre audio base64
-        /// </summary>
-        public string lastDialogueBase64;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public string traceId;
-
+        public string data;
     }
 
     [Serializable]

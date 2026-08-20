@@ -1,7 +1,6 @@
 using SumeruAI.Core;
+using SumeruAI.ATF;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -72,8 +71,10 @@ namespace SumeruAI.API
         {
             try
             {
+                //string token = url == APISettingsConfig.Instance.LoginUrl ? "" : AccessToken;
                 string token = url == APISettingsConfig.Instance.LoginUrl ? "" : AccessToken;
-
+                token = AccessToken;
+                
                 TRep response = null;
                 await HttpRequest.PostAsync<TReq, TRep>(
                     url,
@@ -123,13 +124,105 @@ namespace SumeruAI.API
 
             LoginReqData reqData = new LoginReqData();
             reqData.accessKey = APISettingsConfig.Instance.AccessKey;
-            // reqData.secretKey = ComputeStringMD5(APISettingsConfig.Instance.SecretKey);
             reqData.secretKey = APISettingsConfig.Instance.SecretKey;
 
             Request<LoginReqData, LoginRepData>(APISettingsConfig.Instance.LoginUrl,reqData, (repData) =>
             {
                 AccessToken = repData.data.accessToken;
             });
+        }
+
+        public void RequestAudioToFace(byte[] audioBytes, Action<AtfProtobufResult> onSuccess = null, Action<string> onError = null)
+        {
+            _ = RequestAudioToFaceAsync(audioBytes, onSuccess, onError);
+        }
+
+        public async Task<AtfProtobufResult> RequestAudioToFaceAsync(byte[] audioBytes, Action<AtfProtobufResult> onSuccess = null, Action<string> onError = null)
+        {
+            if (audioBytes == null || audioBytes.Length == 0)
+            {
+                onError?.Invoke("audio is empty");
+                return null;
+            }
+
+            ATFReqData reqData = new ATFReqData();
+            reqData.traceId = Guid.NewGuid().ToString("N");
+            reqData.data = Convert.ToBase64String(audioBytes);
+
+            string json = JsonUtility.ToJson(reqData);
+            byte[] body = Encoding.UTF8.GetBytes(json);
+            string url = APISettingsConfig.Instance.ATFMeshUrl;
+
+            Debug.Log($"[ATF] POST {url} protobuf=true, traceId={reqData.traceId}");
+
+            AtfProtobufResult result = null;
+            await HttpRequest.PostRawAsync(
+                url,
+                AccessToken,
+                body,
+                "application/x-protobuf",
+                (bytes, text, contentType) =>
+                {
+                    try
+                    {
+                        result = ParseAudioToFaceResponse(bytes, text, contentType);
+                        if (result != null && result.Code != 0 && result.Code != 200)
+                        {
+                            onError?.Invoke(string.IsNullOrEmpty(result.Message) ? $"ATF code={result.Code}" : result.Message);
+                            result = null;
+                            return;
+                        }
+
+                        onSuccess?.Invoke(result);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError($"[ATF] parse failed: {ex}");
+                        onError?.Invoke(ex.Message);
+                    }
+                },
+                error =>
+                {
+                    Debug.LogError($"[ATF] Request failed: {error}");
+                    onError?.Invoke(error);
+                });
+
+            return result;
+        }
+
+        private static AtfProtobufResult ParseAudioToFaceResponse(byte[] bytes, string text, string contentType)
+        {
+            int bodyLength = bytes != null ? bytes.Length : 0;
+            Debug.Log($"[ATF] protobuf body={bodyLength} bytes, contentType={contentType}, head={AtfProtobufParser.DescribeHead(bytes)}");
+
+            if (bytes != null && bytes.Length > 0 && bytes[0] == (byte)'{')
+            {
+                ATFRepData repData = JsonUtility.FromJson<ATFRepData>(text);
+                if (repData == null || repData.data == null)
+                {
+                    throw new InvalidOperationException("JSON response missing data");
+                }
+
+                AtfProtobufResult jsonResult = new AtfProtobufResult();
+                jsonResult.Code = repData.code;
+                jsonResult.Message = repData.message;
+                jsonResult.Fps = repData.data.fps;
+                jsonResult.Audio = DecodeBase64OrNull(repData.data.audioKey);
+                jsonResult.Blendshapes = DecodeBase64OrNull(repData.data.emoteKey);
+                return jsonResult;
+            }
+
+            return AtfProtobufParser.Parse(bytes);
+        }
+
+        private static byte[] DecodeBase64OrNull(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return null;
+            }
+
+            return Convert.FromBase64String(value);
         }
 
 

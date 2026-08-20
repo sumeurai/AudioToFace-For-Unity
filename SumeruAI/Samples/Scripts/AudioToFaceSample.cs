@@ -1,13 +1,9 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
+using System.IO;
 using SumeruAI;
-using UnityEngine;
 using SumeruAI.API;
 using SumeruAI.ATF;
-using System.IO;
-
-
+using UnityEngine;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -24,29 +20,20 @@ public class AudioToFaceSample : MonoBehaviour
     [SerializeField] private AudioRecord audioRecord;
 
 
-
     void Start()
     {
         AudioToFaceManager.GetInstance().RegisterModel(0, Sex.Male, skinnedMeshes, rootBone, MotionType.ARKit);
 
-        Login();
-    }
-
-    private void OnDestroy()
-    {
-
-    }
-
-
-    private void Login()
-    {
         APIManager.Instance.Login();
     }
 
 
     void Update()
     {
-
+        if (Input.GetKeyDown(KeyCode.J))
+        {
+            SelectLocalAudioInEditor();
+        }
     }
 
     public void StartRecord()
@@ -61,22 +48,9 @@ public class AudioToFaceSample : MonoBehaviour
     {
         if (audioRecord)
         {
-            ATFReqData reqData = new ATFReqData();
-            reqData.status = "start";
-            reqData.traceId = Guid.NewGuid().ToString("N");
-
-
-            audioRecord.StopRecord((base64, data) =>
+            audioRecord.StopRecord((base64, _) =>
             {
-                reqData.dialogueBase64 = base64;
-
-                APIManager.Instance.Request<ATFReqData, ATFRepData>(APISettingsConfig.Instance.ATFMeshUrl,
-                    reqData,
-                    (repdata) =>
-                    {
-                        AudioToFaceManager.GetInstance().AddAudioFaceData(repdata.data.emoteKey,
-                            repdata.data.audioKey, repdata.data.fps);
-                    });
+                AudioToFaceManager.GetInstance().PlayFromAudio(Convert.FromBase64String(base64));
             });
         }
     }
@@ -92,21 +66,7 @@ public class AudioToFaceSample : MonoBehaviour
         }
 
         byte[] wavBytes = File.ReadAllBytes(filepath);
-
-        string base64 = Convert.ToBase64String(wavBytes);
-
-        ATFReqData reqData = new ATFReqData();
-        reqData.status = "start";
-        reqData.traceId = Guid.NewGuid().ToString("N");
-        reqData.dialogueBase64 = base64;
-
-        APIManager.Instance.Request<ATFReqData, ATFRepData>(APISettingsConfig.Instance.ATFMeshUrl, reqData,
-            (repData) =>
-            {
-                AudioToFaceManager.GetInstance().AddAudioFaceData(repData.data.emoteKey, repData.data.audioKey, repData.data.fps);
-            });
-
+        AudioToFaceManager.GetInstance().PlayFromAudio(wavBytes);
 #endif
     }
 }
-

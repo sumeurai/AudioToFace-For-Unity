@@ -1,117 +1,175 @@
 using UnityEngine;
 using System.IO;
 using System;
-using NAudio;
 using NAudio.Wave;
 
 public static class NAudioPlayer
 {
+    /// <summary>
+    /// Decode audio bytes into an AudioClip. Supports WAV (RIFF) and MP3.
+    /// </summary>
+    public static AudioClip FromAudioData(byte[] buffer)
+    {
+        if (buffer == null || buffer.Length < 4)
+        {
+            throw new ArgumentException("Audio buffer is empty or too short.");
+        }
+
+        using (MemoryStream input = new MemoryStream(buffer))
+        using (WaveStream reader = CreateReader(input, buffer))
+        {
+            WaveStream pcmStream = null;
+            WaveStream source = reader;
+
+            try
+            {
+                if (reader.WaveFormat.Encoding != WaveFormatEncoding.Pcm ||
+                    reader.WaveFormat.BitsPerSample != 16)
+                {
+                    pcmStream = WaveFormatConversionStream.CreatePcmStream(reader);
+                    source = pcmStream;
+                }
+
+                byte[] pcmBytes = ReadAllBytes(source);
+                return CreateClipFromPcm16(pcmBytes, source.WaveFormat);
+            }
+            finally
+            {
+                if (pcmStream != null)
+                {
+                    pcmStream.Dispose();
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Backward-compatible entry. Auto-detects WAV / MP3.
+    /// </summary>
     public static AudioClip FromWavData(byte[] buffer)
     {
-        MemoryStream wavstream = new MemoryStream(buffer);
-        WaveFileReader waveAudio = new WaveFileReader(wavstream);
-
-        WaveStream waveStream = WaveFormatConversionStream.CreatePcmStream(waveAudio);
-
-        // Convert to WAV data
-        WAV wav = new WAV(AudioMemStream(waveStream).ToArray());
-        
-        AudioClip audioClip = AudioClip.Create("audioClip", wav.SampleCount, 1, wav.Frequency, false);
-        audioClip.SetData(wav.LeftChannel, 0);
-        // Return the clip
-        return audioClip;
+        return FromAudioData(buffer);
     }
 
-    private static MemoryStream AudioMemStream(WaveStream waveStream)
+    private static WaveStream CreateReader(Stream stream, byte[] buffer)
     {
-        MemoryStream outputStream = new MemoryStream();
-        using (WaveFileWriter waveFileWriter = new WaveFileWriter(outputStream, waveStream.WaveFormat))
+        if (IsWav(buffer))
         {
-            byte[] bytes = new byte[waveStream.Length];
-            waveStream.Position = 0;
-            waveStream.Read(bytes, 0, Convert.ToInt32(waveStream.Length));
-            waveFileWriter.Write(bytes, 0, bytes.Length);
-            waveFileWriter.Flush();
+            return new WaveFileReader(stream);
         }
-        return outputStream;
-    }
-}
 
-public class WAV
-{
-
-    // convert two bytes to one float in the range -1 to 1
-    static float bytesToFloat(byte firstByte, byte secondByte)
-    {
-        // convert two bytes to one short (little endian)
-        short s = (short)((secondByte << 8) | firstByte);
-        // convert to range from -1 to (just below) 1
-        return s / 32768.0F;
-    }
-
-    static int bytesToInt(byte[] bytes, int offset = 0)
-    {
-        int value = 0;
-        for (int i = 0; i < 4; i++)
+        if (IsMp3(buffer))
         {
-            value |= ((int)bytes[offset + i]) << (i * 8);
+            return new Mp3FileReader(stream);
         }
-        return value;
-    }
-    // properties
-    public float[] LeftChannel { get; internal set; }
-    public float[] RightChannel { get; internal set; }
-    public int ChannelCount { get; internal set; }
-    public int SampleCount { get; internal set; }
-    public int Frequency { get; internal set; }
 
-    public WAV(byte[] wav)
-    {
-
-        // Determine if mono or stereo
-        ChannelCount = wav[22];     // Forget byte 23 as 99.999% of WAVs are 1 or 2 channels
-
-        // Get the frequency
-        Frequency = bytesToInt(wav, 24);
-
-        // Get past all the other sub chunks to get to the data subchunk:
-        int pos = 12;   // First Subchunk ID from 12 to 16
-
-        // Keep iterating until we find the data chunk (i.e. 64 61 74 61 ...... (i.e. 100 97 116 97 in decimal))
-        while (!(wav[pos] == 100 && wav[pos + 1] == 97 && wav[pos + 2] == 116 && wav[pos + 3] == 97))
+        // Last resort: try MP3 then WAV for unusual headers.
+        long pos = stream.Position;
+        try
         {
-            pos += 4;
-            int chunkSize = wav[pos] + wav[pos + 1] * 256 + wav[pos + 2] * 65536 + wav[pos + 3] * 16777216;
-            pos += 4 + chunkSize;
+            return new Mp3FileReader(stream);
         }
-        pos += 8;
-
-        // Pos is now positioned to start of actual sound data.
-        SampleCount = (wav.Length - pos) / 2;     // 2 bytes per sample (16 bit sound mono)
-        if (ChannelCount == 2) SampleCount /= 2;        // 4 bytes per sample (16 bit stereo)
-
-        // Allocate memory (right will be null if only mono sound)
-        LeftChannel = new float[SampleCount];
-        if (ChannelCount == 2) RightChannel = new float[SampleCount];
-        else RightChannel = null;
-
-        // Write to double array/s:
-        int i = 0;
-        while (pos < wav.Length)
+        catch (Exception)
         {
-            LeftChannel[i] = bytesToFloat(wav[pos], wav[pos + 1]);
-            pos += 2;
-            if (ChannelCount == 2)
+            stream.Position = pos;
+            return new WaveFileReader(stream);
+        }
+    }
+
+    private static bool IsWav(byte[] buffer)
+    {
+        return buffer.Length >= 12
+               && buffer[0] == (byte)'R'
+               && buffer[1] == (byte)'I'
+               && buffer[2] == (byte)'F'
+               && buffer[3] == (byte)'F'
+               && buffer[8] == (byte)'W'
+               && buffer[9] == (byte)'A'
+               && buffer[10] == (byte)'V'
+               && buffer[11] == (byte)'E';
+    }
+
+    private static bool IsMp3(byte[] buffer)
+    {
+        if (buffer.Length < 3)
+        {
+            return false;
+        }
+
+        // ID3v2 tag
+        if (buffer[0] == (byte)'I' && buffer[1] == (byte)'D' && buffer[2] == (byte)'3')
+        {
+            return true;
+        }
+
+        // MPEG frame sync: 11 bits set
+        return buffer[0] == 0xFF && (buffer[1] & 0xE0) == 0xE0;
+    }
+
+    private static byte[] ReadAllBytes(WaveStream source)
+    {
+        source.Position = 0;
+
+        if (source.Length > 0)
+        {
+            byte[] bytes = new byte[source.Length];
+            int offset = 0;
+            int read;
+            while (offset < bytes.Length &&
+                   (read = source.Read(bytes, offset, bytes.Length - offset)) > 0)
             {
-                RightChannel[i] = bytesToFloat(wav[pos], wav[pos + 1]);
-                pos += 2;
+                offset += read;
             }
-            i++;
+
+            if (offset == bytes.Length)
+            {
+                return bytes;
+            }
+
+            byte[] trimmed = new byte[offset];
+            Buffer.BlockCopy(bytes, 0, trimmed, 0, offset);
+            return trimmed;
+        }
+
+        // Some compressed streams report Length as 0; read until EOF.
+        using (MemoryStream ms = new MemoryStream())
+        {
+            byte[] buffer = new byte[4096];
+            int read;
+            while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                ms.Write(buffer, 0, read);
+            }
+
+            return ms.ToArray();
         }
     }
 
-    public override string ToString()
+    private static AudioClip CreateClipFromPcm16(byte[] pcmBytes, WaveFormat format)
     {
-        return string.Format("[WAV: LeftChannel={0}, RightChannel={1}, ChannelCount={2}, SampleCount={3}, Frequency={4}]", LeftChannel, RightChannel, ChannelCount, SampleCount, Frequency);
+        int channels = Math.Max(1, format.Channels);
+        int sampleRate = format.SampleRate;
+        int bytesPerSample = Math.Max(1, format.BitsPerSample / 8);
+        int frameCount = pcmBytes.Length / (bytesPerSample * channels);
+
+        if (frameCount <= 0)
+        {
+            throw new FormatException("Decoded audio has no samples.");
+        }
+
+        // Keep mono left-channel behavior for compatibility with previous WAV path.
+        float[] samples = new float[frameCount];
+        int step = bytesPerSample * channels;
+
+        for (int i = 0; i < frameCount; i++)
+        {
+            int pos = i * step;
+            short s = (short)(pcmBytes[pos] | (pcmBytes[pos + 1] << 8));
+            samples[i] = s / 32768.0f;
+        }
+
+        AudioClip audioClip = AudioClip.Create("audioClip", frameCount, 1, sampleRate, false);
+        audioClip.SetData(samples, 0);
+        return audioClip;
     }
 }

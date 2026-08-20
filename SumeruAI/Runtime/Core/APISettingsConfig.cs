@@ -29,6 +29,11 @@ namespace SumeruAI.API
             get { return secretKey; }
         }
 
+        public string BaseUrl
+        {
+            get { return baseUrl; }
+        }
+
         public string LoginUrl
         {
             get { return CombineUrl(baseUrl, login); }

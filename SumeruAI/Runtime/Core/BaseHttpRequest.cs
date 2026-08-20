@@ -70,8 +70,8 @@ namespace SumeruAI.Core
                 Debug.Log("Response: " + uwr.downloadHandler.text);
                 // if (writedata)
                 // {
-                //     string filepath = Path.Combine(Application.dataPath.Replace("Assets", ""),"respone.json");
-                //     File.WriteAllText(filepath, uwr.downloadHandler.text);
+                // string filepath = Path.Combine(Application.dataPath.Replace("Assets", ""),"respone.json");
+                // File.WriteAllText(filepath, uwr.downloadHandler.text);
                 // }
 #endif
 
@@ -92,6 +92,45 @@ namespace SumeruAI.Core
                 {
                     onFail?.Invoke("Response parse failed");
                 }
+            }
+        }
+
+        public async Task PostRawAsync(
+            string url,
+            string accessToken,
+            byte[] body,
+            string accept,
+            Action<byte[], string, string> onSuccess,
+            Action<string> onFail = null)
+        {
+            using (var uwr = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
+            {
+                uwr.uploadHandler = new UploadHandlerRaw(body ?? new byte[0]);
+                uwr.downloadHandler = new DownloadHandlerBuffer();
+                uwr.SetRequestHeader("Content-Type", "application/json");
+                if (!string.IsNullOrEmpty(accept))
+                {
+                    uwr.SetRequestHeader("Accept", accept);
+                }
+
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    uwr.SetRequestHeader("Authorization", accessToken);
+                }
+
+                var asyncOperation = uwr.SendWebRequest();
+                while (!asyncOperation.isDone)
+                {
+                    await Task.Yield();
+                }
+
+                if (uwr.result != UnityWebRequest.Result.Success)
+                {
+                    onFail?.Invoke(uwr.error);
+                    return;
+                }
+
+                onSuccess?.Invoke(uwr.downloadHandler.data, uwr.downloadHandler.text, uwr.GetResponseHeader("Content-Type"));
             }
         }
 

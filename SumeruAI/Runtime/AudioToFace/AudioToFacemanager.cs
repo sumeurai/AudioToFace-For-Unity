@@ -1,8 +1,8 @@
 using SumeruAI;
+using SumeruAI.API;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -60,6 +60,7 @@ namespace SumeruAI.ATF
         private Queue<ATF_Emote_Data> EmoteQueue = new Queue<ATF_Emote_Data>();
         public Dictionary<int, ATFMgrData> ATFDataDic = new Dictionary<int, ATFMgrData>();
         private Dictionary<string, Transform> FaceBones = new Dictionary<string, Transform>();
+        private bool atfRequesting;
 
 
         private void Awake()
@@ -80,34 +81,124 @@ namespace SumeruAI.ATF
 
         public void AddAudioFaceData(string emote, string audio, float fps)
         {
-            if (!string.IsNullOrEmpty(emote) && !string.IsNullOrEmpty(audio))
+            if (!string.IsNullOrEmpty(audio))
             {
-                byte[] tempAudioBuffer = Convert.FromBase64String(audio);
-
-#if UNITY_EDITOR
-                // write data to disk
-                // string filepath = Path.Combine(Application.dataPath.Replace("Assets", ""), "audio.wav");
-                // File.WriteAllBytes(filepath, tempAudioBuffer);
-#endif
-
-                ATF_Audio_Data aTfMgrData = new ATF_Audio_Data();
-
-                aTfMgrData.audioData = tempAudioBuffer;
-                aTfMgrData.time = 10.0f;
-
-                AudioQueue.Enqueue(aTfMgrData);
-
-                ATF_Emote_Data emoteData = new ATF_Emote_Data();
-
-                byte[] tempEmoteBuffer = Convert.FromBase64String(emote);
-
-                emoteData.bs = ConvertByteArrayToFloatArray(tempEmoteBuffer);
-
-                emoteData.fps = fps;
-
-                EmoteQueue.Enqueue(emoteData);
+                AddAudioData(audio);
             }
 
+            if (!string.IsNullOrEmpty(emote))
+            {
+                AddEmoteFaceData(emote, fps);
+            }
+        }
+
+        public void AddAudioData(string audio)
+        {
+            if (string.IsNullOrEmpty(audio))
+            {
+                return;
+            }
+
+            AddAudioData(Convert.FromBase64String(audio));
+        }
+
+        public void AddAudioData(byte[] audioBytes)
+        {
+            if (audioBytes == null || audioBytes.Length == 0)
+            {
+                return;
+            }
+
+            ATF_Audio_Data aTfMgrData = new ATF_Audio_Data();
+            aTfMgrData.audioData = audioBytes;
+            aTfMgrData.time = 10.0f;
+            AudioQueue.Enqueue(aTfMgrData);
+        }
+
+        public void AddEmoteFaceData(string emote, float fps)
+        {
+            if (string.IsNullOrEmpty(emote))
+            {
+                return;
+            }
+
+            AddEmoteFaceData(Convert.FromBase64String(emote), fps);
+        }
+
+        public void AddEmoteFaceData(byte[] blendshapeBytes, float fps)
+        {
+            if (blendshapeBytes == null || blendshapeBytes.Length == 0)
+            {
+                return;
+            }
+
+            ATF_Emote_Data emoteData = new ATF_Emote_Data();
+            emoteData.bs = ConvertByteArrayToFloatArray(blendshapeBytes);
+            emoteData.fps = fps;
+            EmoteQueue.Enqueue(emoteData);
+        }
+
+        public void PlayFromAudio(byte[] wavBytes, Action onSuccess = null, Action<string> onError = null)
+        {
+            if (atfRequesting)
+            {
+                Debug.LogWarning("[ATF] Request already in progress.");
+                return;
+            }
+
+            if (wavBytes == null || wavBytes.Length == 0)
+            {
+                onError?.Invoke("audio is empty");
+                return;
+            }
+
+            atfRequesting = true;
+            Interrupt();
+            APIManager.Instance.RequestAudioToFace(wavBytes,
+                result =>
+                {
+                    atfRequesting = false;
+                    ApplyAtfResult(result, wavBytes);
+                    onSuccess?.Invoke();
+                },
+                error =>
+                {
+                    atfRequesting = false;
+                    Debug.LogError("[ATF] " + error);
+                    onError?.Invoke(error);
+                });
+        }
+
+        public void ApplyAtfResult(AtfProtobufResult result, byte[] fallbackAudio = null)
+        {
+            if (result == null)
+            {
+                return;
+            }
+
+            if (result.Code != 0 && result.Code != 200)
+            {
+                Debug.LogError($"[ATF] code={result.Code}, message={result.Message}");
+                return;
+            }
+
+            bool hasResponseAudio = result.Audio != null && result.Audio.Length > 0;
+            if (hasResponseAudio)
+            {
+                AddAudioData(result.Audio);
+            }
+            else if (fallbackAudio != null && fallbackAudio.Length > 0)
+            {
+                Debug.Log($"[ATF] response has no audio, playing local wav {fallbackAudio.Length} bytes");
+                AddAudioData(fallbackAudio);
+            }
+
+            if (result.Blendshapes != null && result.Blendshapes.Length > 0)
+            {
+                float fps = result.Fps > 0f ? result.Fps : 30f;
+                Debug.Log($"[ATF] a2f frames={result.NumFrames}, fps={fps}, bytes={result.Blendshapes.Length}");
+                AddEmoteFaceData(result.Blendshapes, fps);
+            }
         }
 
         public void RegisterModel(int id, Sex sex, SkinnedMeshRenderer[] skinnedMeshRenderers, Transform RootBone,
@@ -190,7 +281,7 @@ namespace SumeruAI.ATF
             {
                 ATF_Audio_Data mgrData = AudioQueue.Dequeue();
 
-                AudioClip audioClip = NAudioPlayer.FromWavData(mgrData.audioData);
+                AudioClip audioClip = NAudioPlayer.FromAudioData(mgrData.audioData);
 
                 audioClips.Add(audioClip);
 

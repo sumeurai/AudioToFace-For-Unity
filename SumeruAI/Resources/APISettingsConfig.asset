@@ -16,4 +16,4 @@ MonoBehaviour:
   secretKey: 
   baseUrl: https://api.sumeruai.us/
   login: v1/access/auth
-  atfMesh: v1/audio-to-face/mesh
+  atfMesh: v1/audio-to-face/offline-mesh

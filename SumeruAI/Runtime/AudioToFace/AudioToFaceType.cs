@@ -10,7 +10,7 @@ namespace SumeruAI.ATF
     public static class LiveLinkTrackingData
     {
         // The proper names of each ARKit blendshape
-        public static readonly string[] Names =
+        public static readonly string[] BSNames =
         {
             "EyeBlinkLeft",
             "EyeLookDownLeft",
@@ -75,6 +75,36 @@ namespace SumeruAI.ATF
             "EyeRollRight"
         }; // RightEyeRoll
 
+        // 
+        public static readonly HashSet<string> DisabledBSNames = new HashSet<string>
+        {
+            // "EyeLookDownLeft",
+            // "EyeLookInLeft",
+            // "EyeLookOutLeft",
+            // "EyeLookUpLeft",
+            //
+            // "EyeLookDownRight",
+            // "EyeLookInRight",
+            // "EyeLookOutRight",
+            // "EyeLookUpRight",
+        };
+
+        public static bool IsNameEnabled(string name)
+        {
+            return string.IsNullOrEmpty(name) || !DisabledBSNames.Contains(name);
+        }
+
+        public static bool TryGetName(int index, out string name)
+        {
+            if (index >= 0 && index < BSNames.Length)
+            {
+                name = BSNames[index];
+                return true;
+            }
+
+            name = null;
+            return false;
+        }
     }
 
     [Serializable]
@@ -138,9 +168,13 @@ namespace SumeruAI.ATF
         public void SetFrameData(float[] data)
         {
             CurFrameBoneData.Clear();
-            for (int i = 0; i < data.Length; i++)
+            int count = Mathf.Min(data.Length, LiveLinkTrackingData.BSNames.Length);
+            for (int i = 0; i < count; i++)
             {
-                string bsName = LiveLinkTrackingData.Names[i].ToLower();
+                if (!LiveLinkTrackingData.TryGetName(i, out var rawName) || !LiveLinkTrackingData.IsNameEnabled(rawName))
+                    continue;
+
+                string bsName = rawName.ToLower();
 
                 //if (!bsName.Contains("eye"))
                 //    continue;
@@ -240,31 +274,44 @@ namespace SumeruAI.ATF
 
         public void SetARKitBs(float[] data)
         {
-            for (int i = 0; i < data.Length; i++)
+            int count = Mathf.Min(data.Length, LiveLinkTrackingData.BSNames.Length);
+            for (int i = 0; i < count; i++)
             {
-                var name = LiveLinkTrackingData.Names[i];
+                if (!LiveLinkTrackingData.TryGetName(i, out var name) || !LiveLinkTrackingData.IsNameEnabled(name))
+                    continue;
+
                 var value = data[i];
                 value = Mathf.Clamp(value, 0, 1);
                 float temp = value / 100 * 100;
                 temp = Mathf.Min(temp * 100, 100);
 
-
                 foreach (var part in ATFPartDatas)
                 {
                     part.SetBlendShapeValue(name, temp);
                 }
+            }
 
-                var headDefaultRot = initialRotationHead.eulerAngles;
+            var headDefaultRot = initialRotationHead.eulerAngles;
 
-                if (Head != null)
-                    Head.localEulerAngles = new Vector3(headDefaultRot.x + data[53] * -50,
-                        headDefaultRot.y + data[52] * 50, headDefaultRot.z + data[54] * 50);
+            if (Head != null && data.Length > 54)
+            {
+                float yaw = LiveLinkTrackingData.IsNameEnabled("HeadYaw") ? data[52] : 0f;
+                float pitch = LiveLinkTrackingData.IsNameEnabled("HeadPitch") ? data[53] : 0f;
+                float roll = LiveLinkTrackingData.IsNameEnabled("HeadRoll") ? data[54] : 0f;
+                Head.localEulerAngles = new Vector3(headDefaultRot.x + pitch * -50,
+                    headDefaultRot.y + yaw * 50, headDefaultRot.z + roll * 50);
+            }
 
-                if (!EyeControl && LeftEye != null && RightEye != null)
-                {
-                    LeftEye.localEulerAngles = new Vector3(GetAngle(data[56]), GetAngle(data[55]), GetAngle(data[57]));
-                    RightEye.localEulerAngles = new Vector3(GetAngle(data[59]), GetAngle(data[58]), GetAngle(data[60]));
-                }
+            if (!EyeControl && LeftEye != null && RightEye != null && data.Length > 60)
+            {
+                LeftEye.localEulerAngles = new Vector3(
+                    GetAngle(LiveLinkTrackingData.IsNameEnabled("EyePitchLeft") ? data[56] : 0f),
+                    GetAngle(LiveLinkTrackingData.IsNameEnabled("EyeYawLeft") ? data[55] : 0f),
+                    GetAngle(LiveLinkTrackingData.IsNameEnabled("EyeRollLeft") ? data[57] : 0f));
+                RightEye.localEulerAngles = new Vector3(
+                    GetAngle(LiveLinkTrackingData.IsNameEnabled("EyePitchRight") ? data[59] : 0f),
+                    GetAngle(LiveLinkTrackingData.IsNameEnabled("EyeYawRight") ? data[58] : 0f),
+                    GetAngle(LiveLinkTrackingData.IsNameEnabled("EyeRollRight") ? data[60] : 0f));
             }
         }
 
@@ -662,19 +709,19 @@ namespace SumeruAI.ATF
         {
             var tempName = name.Split('.')[1];
             tempName = tempName.Split('h')[1];
-            return LiveLinkTrackingData.Names[int.Parse(tempName)];
+            return LiveLinkTrackingData.BSNames[int.Parse(tempName)];
         }
 
         private string GetMappingName(string name)
         {
-            var Count = LiveLinkTrackingData.Names.Length;
+            var Count = LiveLinkTrackingData.BSNames.Length;
 
             for (int i = 0; i < Count; i++)
             {
-                var tempLiveName = LiveLinkTrackingData.Names[i].ToLower();
+                var tempLiveName = LiveLinkTrackingData.BSNames[i].ToLower();
                 if (name.ToLower().Contains(tempLiveName))
                 {
-                    return LiveLinkTrackingData.Names[i];
+                    return LiveLinkTrackingData.BSNames[i];
                 }
             }
 

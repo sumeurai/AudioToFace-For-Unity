@@ -1,88 +1,191 @@
-# AudioToFace-For-Unity
+# SumeruAI AudioToFace for Unity
 
-Audio-to-3D Face SDK for Unity enables developers to generate real-time 3D facial animations from speech audio using our AI-powered API. Simply feed in an audio clip or audio stream, and the SDK returns a sequence of facial blendshape coefficients that can be applied to any 3D character model — bringing your avatars to life with natural, speech-synchronized expressions.
+Drive any ARKit-ready 3D character with speech-synchronized facial animation.
 
-> ⚠️ This repository is tailored as a sample. Replace API endpoints, keys and assets with your own when integrating into a real application.
+Send a WAV clip (microphone or file) to the [SumeruAI](https://www.sumeruai.us/) Audio-to-Face API. The plugin returns blendshape coefficients and plays them back in sync with audio.
+
+Get an **Access Key** and **Secret Key** from the [Developers](https://www.sumeruai.us/) page before running the sample.
+
+> Do not commit real keys. Keep `APISettingsConfig.asset` empty in the public repo and fill credentials locally.
 
 ---
 
-## 🎯 Features
+## Features
 
-- Microphone recording with automatic WAV conversion (`AudioRecord`)
-- Login and HTTP request handling via `APIManager` and `APISettingsConfig`
-- Streaming of audio and emote frames into your scene using `AudioToFaceManager`
-- Sample MonoBehaviour (`AudioToFaceSample`) with UI buttons for recording, sending audio, and selecting local WAV files
+- Offline Audio-to-Face: one WAV in, blendshape frames + optional audio out
+- ARKit blendshape playback (FLAME / bone-driven modes are also in the runtime)
+- Microphone capture at 16 kHz PCM WAV (`AudioRecord`)
+- Editor WAV picker in the sample
+- Project Settings UI: **Edit → Project Settings → SumeruAI → API Settings**
+- Protobuf response by default, with JSON fallback
 
+---
 
-## 🔧 Setup Instructions
+## Requirements
 
-1. **Open the project** in Unity (2020.3+ recommended).
-2. **Configure the APISettingsConfig asset** (a default configuration is provided for demonstration; you can either modify it directly or create your own):
-   - Get your `Access Key` and `Secret Key` from the `Developers` page at `https://www.sumeruai.us/`.
-   - **Option A**: Modify the default configuration at `Assets/SumeruAI/Resources` – fill in the `Access Key`, `Secret Key`, and the base URL plus relative paths for `login` and `atfMesh`.
-   - **Option B**: Create a new configuration – in the Project window, `Right-click → Create → SumeruAI → API Settings Config`, then fill in the required API credentials and paths from the `Developers` page.
-   - The asset must reside under a `Resources` folder so it can be loaded at runtime.
+| Item | Version / note |
+| --- | --- |
+| Unity | 2020.3 LTS or newer |
+| Render Pipeline | **HDRP** for the bundled Xandra sample. Runtime code only needs `SkinnedMeshRenderer` |
+| Network | HTTPS access to `https://api.sumeruai.us/` |
+| Character | ARKit blendshape names on the face mesh (see [Character setup](#character-setup)) |
+| Audio | PCM WAV. The sample recorder uses **16 kHz**, 16-bit |
 
-3. **Scene preparation**:
-   - Open the sample scene: `Assets/SumeruAI/Samples/Scenes/AudioToFace.unity`
-   - The scene already includes a GameObject with `AudioToFaceSample` attached.
-   
-4. **Run the sample**:
-   - Press Play in the Editor.
-   - Use the UI buttons: "Start Record" to begin recording, "Stop Record" to stop and send the audio; "Select Local Audio" (Editor only) to pick a WAV file and send it.
-   - After the server responds, the manager will enqueue audio and blendshape data. The face should animate and the audio play back.
+---
 
-5. **Build targets**: The code currently supports Editor and Windows (`Application.platform` check for writing files). Add platform-specific paths if needed.
+## Folder layout
 
+```
+Assets/SumeruAI/
+├── Runtime/          # API, AudioToFace manager, protobuf parser
+├── Editor/           # Project Settings window
+├── Plugins/          # NAudio (WAV → AudioClip)
+├── Resources/        # APISettingsConfig.asset (put keys here)
+└── Samples/
+    ├── Scenes/ATF.unity
+    ├── Scripts/      # AudioToFaceSample, AudioRecord
+    └── Models/Xandra # HDRP sample character
+```
 
-## 📡 API Protocol
+---
 
-Data classes defined in `RequestUtil.cs` are serialized as JSON for communication:
+## Install
+
+1. Copy `Assets/SumeruAI` into your Unity project (keep `.meta` files).
+2. If you are not using HDRP, you can omit `Samples/Models/Xandra` and still use the runtime on your own character.
+3. Open **SumeruAI → API Settings** (or **Edit → Project Settings → SumeruAI → API Settings**).
+4. Enter Access Key and Secret Key, then **Save Settings**.  
+   The asset must live under a `Resources` folder so it loads at runtime.
+
+Default endpoints (already set on the sample config):
+
+| Setting | Value |
+| --- | --- |
+| Base URL | `https://api.sumeruai.us/` |
+| Login | `v1/access/auth` |
+| Audio-to-Face | `v1/audio-to-face/offline-mesh` |
+
+---
+
+## Run the sample
+
+1. Open `Assets/SumeruAI/Samples/Scenes/ATF.unity`.
+2. Press Play. `AudioToFaceSample` logs in and registers the character as ARKit.
+3. Use the UI:
+   - **Start Record** / **Stop Record** — capture from the default microphone, then send.
+   - **Select Local Audio** — pick a `.wav` in the Editor (or press **J**).
+4. After the API returns, the plugin plays audio and drives the face.
+
+---
+
+## Integrate into your scene
+
+Minimal flow: register a character, log in, send WAV bytes.
 
 ```csharp
-[Serializable]
-public class ATFReqData
-{
-    public string status;              // "start" or "stop" etc.
-    public string dialogueBase64;      // base64-encoded WAV bytes
-    public string lastDialogueBase64;  // optional
-    public string traceId;
-}
+using SumeruAI;
+using SumeruAI.API;
+using SumeruAI.ATF;
+using UnityEngine;
 
-[Serializable]
-public class ATFRepData : BaseResponse
+public class MyAtfSetup : MonoBehaviour
 {
-    public ATFRepBodyData data;
-}
+    [SerializeField] SkinnedMeshRenderer[] faceMeshes;
+    [SerializeField] Transform rootBone;
 
-[Serializable]
-public class ATFRepBodyData
-{
-    public long id;
-    public string emoteKey;            // base64-encoded float array for blendshapes
-    public string audioKey;            // base64-encoded WAV bytes
-    public float fps;
+    void Start()
+    {
+        AudioToFaceManager.GetInstance().RegisterModel(
+            id: 0,
+            sex: Sex.Female,
+            skinnedMeshRenderers: faceMeshes,
+            RootBone: rootBone,
+            motionType: MotionType.ARKit);
+
+        APIManager.Instance.Login();
+    }
+
+    public void PlayWav(byte[] wavBytes)
+    {
+        AudioToFaceManager.GetInstance().PlayFromAudio(
+            wavBytes,
+            onSuccess: () => Debug.Log("ATF started"),
+            onError: err => Debug.LogError(err));
+    }
 }
 ```
 
-The sample sends requests via `APIManager.Request<TReq,TRep>`, which automatically attaches the access token obtained from `Login()`.
+Microphone → WAV → play:
 
+```csharp
+audioRecord.StopRecord((base64, wavBytes) =>
+{
+    AudioToFaceManager.GetInstance().PlayFromAudio(wavBytes);
+});
+```
 
-## 🧩 Extending the Sample
+### Multiple characters
 
-- **Multiple characters**: call `AudioToFaceManager.GetInstance().RegisterModel` with distinct IDs.
-- **Custom recorders**: replace `AudioRecord` with your own microphone or file logic – just call `AudioToFaceManager.AddAudioFaceData` with the returned base64 strings.
-- **UI hooks**: subscribe to `AudioToFaceManager` events (`StartSpeechEvent`, `StopSpeechEvent`, `StopMotionEvent`, etc.) for in-game notifications.
+Call `RegisterModel` with a unique `id` per character. Playback goes to every registered model. Use `UnRegisterModel(id)` when a character is destroyed.
 
+### Events
 
-## ✅ Notes & Tips
-
-- All networking is asynchronous; callbacks are executed on the Unity main thread.
-- The manager converts the server's byte arrays into float arrays and then into `EmoteData` objects for playback.
-- The sample includes minimal error logging; expand it when integrating into production.
-- Editor-only code uses `UnityEditor` APIs guarded by `#if UNITY_EDITOR`.
-
+```csharp
+var atf = AudioToFaceManager.GetInstance();
+atf.StartSpeechEvent += () => { /* audio started */ };
+atf.StopSpeechEvent  += () => { /* audio finished */ };
+atf.StopMotionEvent  += () => { /* blendshapes finished */ };
+atf.Interrupt(); // cancel queues and fade current expression
+```
 
 ---
 
-Feel free to fork and adapt this sample for your own AudioToFace workflows. Contributions and issues are welcome!
+## Character setup
+
+`MotionType.ARKit` matches blendshape names on each `SkinnedMeshRenderer` against ARKit names (case-insensitive substring), for example:
+
+`EyeBlinkLeft`, `JawOpen`, `MouthSmileLeft`, `BrowInnerUp`, `CheekPuff`, …
+
+Head / eye bones are used when present (`head`, `jaw`, and eye transforms). Name blendshapes close to ARKit; MetaHuman-style `Mesh.xxx` names are also mapped.
+
+`MotionType.FLAME` and `MotionType.Bones` are available in the runtime if your mesh uses those conventions.
+
+---
+
+## API overview
+
+Callers normally use `PlayFromAudio`. The HTTP layer is:
+
+1. **Login** `POST v1/access/auth`  
+   Body: `{ "accessKey", "secretKey" }` → `accessToken`
+2. **Audio-to-Face** `POST v1/audio-to-face/offline-mesh`  
+   Header: `Authorization: <token>`, `Accept: application/x-protobuf`  
+   Body: `{ "traceId", "data": "<wav-base64>" }`
+
+Response (protobuf preferred; JSON still accepted):
+
+| Field | Meaning |
+| --- | --- |
+| `fps` | Blendshape frame rate (sample uses 30 if missing) |
+| `audio` / `audioKey` | Optional WAV. If empty, the local clip is played |
+| `blendshapes` / `emoteKey` | Little-endian float32, **61 values per frame** (52 ARKit + head/eye extras) |
+
+Only one ATF request runs at a time. A new `PlayFromAudio` while a request is in flight is ignored.
+
+---
+
+## Platform notes
+
+- Networking and callbacks run on the Unity main thread.
+- `AudioRecord` uses `Microphone` (available on Editor, Windows, and most players with mic permission).
+- Local file picker uses `UnityEditor` and is Editor-only.
+- NAudio is bundled for WAV decoding. See [ThirdPartyNotices.md](ThirdPartyNotices.md).
+
+---
+
+## License
+
+Use of the SumeruAI API is subject to your account terms on [sumeruai.us](https://www.sumeruai.us/).  
+Third-party libraries and sample assets: [ThirdPartyNotices.md](ThirdPartyNotices.md).
+
+Issues and contributions are welcome.
