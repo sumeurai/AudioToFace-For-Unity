@@ -84,7 +84,7 @@ namespace SumeruAI.Editor
             EditorApplication.delayCall += TryReport;
         }
 
-        [MenuItem("SumeruAI/Retry Install Stat", false, 0)]
+        //[MenuItem("SumeruAI/Retry Install Stat", false, 0)]
         static void RetryReport()
         {
             string prefKey = PrefKeyPrefix + Application.dataPath.GetHashCode();
@@ -93,14 +93,14 @@ namespace SumeruAI.Editor
             TryReport();
         }
 
-        [MenuItem("SumeruAI/Install Stat Debug Log", false, 1)]
+        //[MenuItem("SumeruAI/Install Stat Debug Log", false, 1)]
         static void ToggleDebugLog()
         {
             DebugLogEnabled = !DebugLogEnabled;
             Debug.Log($"[SumeruAI] Install stat debug log: {(DebugLogEnabled ? "ON" : "OFF")}");
         }
 
-        [MenuItem("SumeruAI/Install Stat Debug Log", true)]
+        //[MenuItem("SumeruAI/Install Stat Debug Log", true)]
         static bool ToggleDebugLogValidate()
         {
             Menu.SetChecked("SumeruAI/Install Stat Debug Log", DebugLogEnabled);
