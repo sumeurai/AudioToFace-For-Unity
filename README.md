@@ -10,6 +10,10 @@ Get an **Access Key** and **Secret Key** from the [Developers](https://www.sumer
 
 ---
 
+
+https://github.com/user-attachments/assets/e621056c-3cb6-45af-ada3-ccb010bbf698
+
+
 ## Features
 
 - Offline Audio-to-Face: one WAV in, blendshape frames + optional audio out
