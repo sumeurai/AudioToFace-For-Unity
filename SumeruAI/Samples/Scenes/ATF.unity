@@ -1522,10 +1522,10 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 1
         m_CallState: 2
-      - m_Target: {fileID: 211522284}
-        m_TargetAssemblyTypeName: AudioRecord, Assembly-CSharp
-        m_MethodName: StartRecord
-        m_Mode: 3
+      - m_Target: {fileID: 1020730840}
+        m_TargetAssemblyTypeName: AudioToFaceSample, Assembly-CSharp
+        m_MethodName: StopRecord
+        m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -1969,10 +1969,10 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 1
         m_CallState: 2
-      - m_Target: {fileID: 211522284}
-        m_TargetAssemblyTypeName: AudioRecord, Assembly-CSharp
+      - m_Target: {fileID: 1020730840}
+        m_TargetAssemblyTypeName: AudioToFaceSample, Assembly-CSharp
         m_MethodName: StartRecord
-        m_Mode: 3
+        m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -2404,7 +2404,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.19607843, g: 0.19607843, b: 0.19607843, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1

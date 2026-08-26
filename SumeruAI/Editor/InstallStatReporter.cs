@@ -62,7 +62,7 @@ namespace SumeruAI.Editor
 
         const string BizType = "12";
         const string EventType = "2";
-        const string EventKey = "sdk/unity/install_success";
+        const string EventKey = "sdk/atf/install_success";
         const string Product = "atf";
         const string PackageName = "atf";
 
