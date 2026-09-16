@@ -267,7 +267,7 @@ Only one ATF request runs at a time. A new `PlayFromAudio` while a request is in
 
 This Unity plugin is [MIT](https://github.com/sumeurai/AudioToFace-For-Unity/blob/main/LICENSE).  
 Use of the SumeruAI API is subject to your account terms on [sumeruai.us](https://www.sumeruai.us/).  
-Third-party libraries and sample assets: [ThirdPartyNotices.md](ThirdPartyNotices.md).  
-Version history: [CHANGELOG.md](CHANGELOG.md).
+Third-party libraries and sample assets: [ThirdPartyNotices.md](SumeruAI/ThirdPartyNotices.md).  
+Version history: [CHANGELOG.md](SumeruAI/CHANGELOG.md).
 
 Issues and contributions are welcome.
