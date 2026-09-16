@@ -9,17 +9,18 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
-- Unity Package Manager install (`com.sumeruai.atf`) via Git URL `?path=/SumeruAI`. API keys are saved under the project's `Assets` so they survive package updates.
-- Built-in and URP Xandra sample scenes (`ATF_BuiltIn.unity`, `ATF_URP.unity`), in addition to the existing HDRP `ATF.unity`.
+- Unity Package Manager install (`com.sumeruai.atf`, display name **AudioToFace for Unity**). Git URL: `?path=/SumeruAI`. API keys save under the project's `Assets` so they survive package updates.
+- Built-in and URP Xandra sample scenes (`ATF_BuiltIn.unity`, `ATF_URP.unity`) alongside the existing HDRP `ATF.unity`.
 - Pipeline-specific materials (`Materials/HDRP`, `Materials/URP`, `Materials/BuiltIn`) and CoreRP character shaders so the sample runs without the HDRP package.
 - Editor import gate that hides HDRP Shader Graphs when HDRP is not installed.
-- `SumeruAI → Samples` menu and a Package Manager sample that copy scenes into `Assets`, so Git installs can open them (package folders are read-only).
+- Package Manager **Samples → Import** and **SumeruAI → Samples**. Git packages are read-only; copy the scene into `Assets` before opening it.
 
 ### Changed
 
-- Sample textures live under `Textures/` instead of sitting next to materials.
+- Sample textures live under `Textures/`.
 - README covers Git UPM, GitHub Releases `.unitypackage`, and copy-into-Assets.
 - Character setup docs describe ARKit name matching; they no longer imply MetaHuman `Mesh.xxx` naming.
+- Built-in / URP sample look: URP reads main-light intensity, Fill / Rim contribute, closer skin wrap and hair highlights.
 
 ### Fixed
 
