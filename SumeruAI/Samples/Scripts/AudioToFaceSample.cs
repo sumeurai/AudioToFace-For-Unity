@@ -19,6 +19,24 @@ public class AudioToFaceSample : MonoBehaviour
 
     [SerializeField] private AudioRecord audioRecord;
 
+    public void Bind(SkinnedMeshRenderer[] meshes, Transform root, AudioRecord record)
+    {
+        if (meshes != null && meshes.Length > 0)
+        {
+            skinnedMeshes = meshes;
+        }
+
+        if (root != null)
+        {
+            rootBone = root;
+        }
+
+        if (record != null)
+        {
+            audioRecord = record;
+        }
+    }
+
 
     void Start()
     {

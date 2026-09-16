@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
 using SumeruAI.API;
 using UnityEditor;
 using UnityEngine;
@@ -10,18 +7,16 @@ namespace SumeruAI.Editor
 {
     public class APISettingsProvider : SettingsProvider
     {
-
         private const string SETTINGS_PATH = "Project/SumeruAI/APISettingsProvider";
 
         private string accessKey;
         private string secretKey;
 
-        private bool hasConfigAsset;
+        private bool hasWritableConfigAsset;
 
         public APISettingsProvider(string path, SettingsScope scopes) : base(path, scopes)
         {
         }
-
 
         [SettingsProvider]
         public static SettingsProvider CreateSettingsProvider()
@@ -35,15 +30,14 @@ namespace SumeruAI.Editor
             return provider;
         }
 
-
         public override void OnActivate(string searchContext, VisualElement rootElement)
         {
             base.OnActivate(searchContext, rootElement);
 
             APISettingsConfig config = APISettingsConfig.Instance;
-            hasConfigAsset = config != null && EditorUtility.IsPersistent(config);
+            hasWritableConfigAsset = SumeruAIEditorPaths.IsWritableProjectConfig(config);
 
-            if (hasConfigAsset)
+            if (config != null)
             {
                 accessKey = config.AccessKey;
                 secretKey = config.SecretKey;
@@ -56,12 +50,10 @@ namespace SumeruAI.Editor
 
             GUILayout.Space(15);
 
-            // Display Logo
             DisplayLogo();
 
             GUILayout.Space(20);
 
-            // Settings Title
             var titleStyle = new GUIStyle(EditorStyles.label)
             {
                 fontSize = 14,
@@ -72,21 +64,20 @@ namespace SumeruAI.Editor
 
             GUILayout.Space(10);
 
-            // Warning Box
-            if (!hasConfigAsset)
+            if (!hasWritableConfigAsset)
             {
-                EditorGUILayout.HelpBox("No API settings asset was found in a Resources folder. Please create one and configure your API credentials.", MessageType.Warning);
+                EditorGUILayout.HelpBox(
+                    "Save writes credentials to Assets/SumeruAI/Resources so they stay in your project when the plugin is installed from Package Manager.",
+                    MessageType.Info);
                 GUILayout.Space(10);
             }
 
-            // Input Fields with better styling
             EditorGUILayout.Space(5);
             accessKey = EditorGUILayout.TextField("AccessKey:", accessKey);
             GUILayout.Space(5);
             secretKey = EditorGUILayout.TextField("SecretKey:", secretKey);
             GUILayout.Space(15);
 
-            // Save Button with better styling
             var buttonStyle = new GUIStyle(GUI.skin.button)
             {
                 padding = new RectOffset(10, 10, 8, 8),
@@ -102,76 +93,60 @@ namespace SumeruAI.Editor
                     return;
                 }
 
-                if (!hasConfigAsset)
+                if (hasWritableConfigAsset)
                 {
-                    string folder = EditorUtility.OpenFolderPanel("Save Settings", "Assets", "");
-                    string relativePath = FileUtil.GetProjectRelativePath(folder);
-                    SaveSettings(relativePath);
+                    APISettingsConfig.Instance.SetAccessKeyAndSecretKeyFromEditor(accessKey, secretKey);
+                    AssetDatabase.SaveAssets();
                 }
                 else
                 {
-                    APISettingsConfig.Instance.SetAccessKeyAndSecretKeyFromEditor(accessKey, secretKey);
+                    SaveProjectSettings();
                 }
             }
-
         }
 
         private void DisplayLogo()
         {
-            try
+            Texture2D logo = AssetDatabase.LoadAssetAtPath<Texture2D>(SumeruAIEditorPaths.LogoAssetPath);
+            if (logo == null)
             {
-                // Load logo from Editor/Texture folder using AssetDatabase
-                string logoPath = "Assets/SumeruAI/Editor/Texture/logo.png";
-                Texture2D logo = AssetDatabase.LoadAssetAtPath<Texture2D>(logoPath);
-
-                if (logo != null)
-                {
-                    float logoWidth = 64f;
-                    float logoHeight = 64f * (logo.height / (float)logo.width);
-
-                    EditorGUILayout.BeginHorizontal();
-                    GUILayout.FlexibleSpace();
-                    GUILayout.Label(logo, GUILayout.Width(logoWidth), GUILayout.Height(logoHeight));
-                    GUILayout.FlexibleSpace();
-                    EditorGUILayout.EndHorizontal();
-                }
-                else
-                {
-                    Debug.LogWarning("No file in Assets/SumeruAI/Editor/Texture/logo.png");
-                }
+                return;
             }
-            catch
-            {
-                // Silently ignore if logo not found
-            }
+
+            float logoWidth = 64f;
+            float logoHeight = 64f * (logo.height / (float)logo.width);
+
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            GUILayout.Label(logo, GUILayout.Width(logoWidth), GUILayout.Height(logoHeight));
+            GUILayout.FlexibleSpace();
+            EditorGUILayout.EndHorizontal();
         }
 
-
-        private void SaveSettings(string path)
+        private void SaveProjectSettings()
         {
-            if (!string.IsNullOrEmpty(path))
+            SumeruAIEditorPaths.EnsureProjectResourcesFolder();
+
+            APISettingsConfig source = APISettingsConfig.Instance;
+            APISettingsConfig asset = Object.Instantiate(source);
+            asset.SetAccessKeyAndSecretKeyFromEditor(accessKey, secretKey);
+
+            string filename = SumeruAIEditorPaths.ProjectConfigAsset;
+            APISettingsConfig existing = AssetDatabase.LoadAssetAtPath<APISettingsConfig>(filename);
+            if (existing != null)
             {
-
-                if (path.Contains("Resources"))
-                {
-                    string filename = Path.Combine(path, "APISettingsConfig.asset");
-
-                    APISettingsConfig config = APISettingsConfig.Instance;
-                    config.SetAccessKeyAndSecretKeyFromEditor(accessKey, secretKey);
-                    AssetDatabase.CreateAsset(config, filename);
-                    AssetDatabase.SaveAssets();
-                    hasConfigAsset = true;
-                }
-                else
-                {
-                    EditorUtility.DisplayDialog("Warning", "Please select the Resources folder", "OK");
-                }
-
+                existing.SetAccessKeyAndSecretKeyFromEditor(accessKey, secretKey);
+                Object.DestroyImmediate(asset);
+            }
+            else
+            {
+                AssetDatabase.CreateAsset(asset, filename);
             }
 
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            APISettingsConfig.ReloadInstance();
+            hasWritableConfigAsset = true;
         }
-
-
     }
-
 }

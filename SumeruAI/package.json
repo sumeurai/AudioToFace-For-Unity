@@ -1,0 +1,22 @@
+{
+  "name": "com.sumeruai.atf",
+  "version": "0.0.6",
+  "displayName": "SumeruAI AudioToFace",
+  "description": "Drive ARKit-ready 3D characters with speech-synchronized facial animation via the SumeruAI Audio-to-Face API.",
+  "unity": "2020.3",
+  "documentationUrl": "https://github.com/sumeurai/AudioToFace-For-Unity#readme",
+  "changelogUrl": "https://github.com/sumeurai/AudioToFace-For-Unity/blob/main/SumeruAI/CHANGELOG.md",
+  "licensesUrl": "https://github.com/sumeurai/AudioToFace-For-Unity/blob/main/LICENSE",
+  "license": "MIT",
+  "keywords": [
+    "audio",
+    "lip-sync",
+    "blendshape",
+    "arkit",
+    "facial-animation"
+  ],
+  "author": {
+    "name": "SumeruAI",
+    "url": "https://www.sumeruai.us/"
+  }
+}
