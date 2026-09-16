@@ -1,4 +1,4 @@
-# SumeruAI AudioToFace for Unity
+# AudioToFace for Unity
 
 Drive any ARKit-ready 3D character with speech-synchronized facial animation.
 
@@ -88,6 +88,11 @@ Or add this to your project's `Packages/manifest.json`:
 
 `?path=/SumeruAI` is required because `package.json` lives in the `SumeruAI` folder, not the repository root. Package id is `com.sumeruai.atf`.
 
+Git packages live in a **read-only** Package Cache. Double-clicking a scene under `Packages/` shows *Opening scene in read-only package*. Use one of:
+
+1. **SumeruAI → Samples → Open … Scene** — copies the scene to `Assets/SumeruAI Samples/` and opens that copy.
+2. Package Manager → **AudioToFace for Unity → Samples → Import**, then open the scene from `Assets/Samples/…`.
+
 ### Unity package (GitHub Releases)
 
 Each [release](https://github.com/sumeurai/AudioToFace-For-Unity/releases) includes a `.unitypackage` exported from the `SumeruAI` folder.
@@ -129,7 +134,7 @@ Pick the scene that matches your render pipeline:
 | **URP** | `Samples/Scenes/ATF_URP.unity` | `Materials/URP` + CoreRP hair |
 | **Built-in** | `Samples/Scenes/ATF_BuiltIn.unity` | `Materials/BuiltIn` + CoreRP hair |
 
-Package Manager paths are under `Packages/com.sumeruai.atf/…`. Copied or `.unitypackage` installs use `Assets/SumeruAI/…`.
+Package Manager paths are under `Packages/com.sumeruai.atf/…`. Copied or `.unitypackage` installs use `Assets/SumeruAI/…`. After a Git install, open the writable copy under `Assets/SumeruAI Samples/` (or `Assets/Samples/…` if you used **Import**).
 
 `ATF_URP` and `ATF_BuiltIn` remap Xandra when the scene opens (`XandraCoreRpSetup`): URP uses `Materials/URP`, Built-in uses `Materials/BuiltIn`. Hair and lashes use `SumeruAI/CoreRP/CharacterHair`. Save the scene once after that so the overrides stick. Face animation is the same ARKit blendshape path.
 

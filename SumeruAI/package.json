@@ -1,7 +1,7 @@
 {
   "name": "com.sumeruai.atf",
   "version": "0.0.6",
-  "displayName": "SumeruAI AudioToFace",
+  "displayName": "AudioToFace for Unity",
   "description": "Drive ARKit-ready 3D characters with speech-synchronized facial animation via the SumeruAI Audio-to-Face API.",
   "unity": "2020.3",
   "documentationUrl": "https://github.com/sumeurai/AudioToFace-For-Unity#readme",
@@ -18,5 +18,12 @@
   "author": {
     "name": "SumeruAI",
     "url": "https://www.sumeruai.us/"
-  }
+  },
+  "samples": [
+    {
+      "displayName": "Xandra Sample Scenes",
+      "description": "HDRP (ATF), URP (ATF_URP), and Built-in (ATF_BuiltIn). Git packages are read-only — import this sample (or use SumeruAI → Samples) so the scenes copy into Assets before you open them.",
+      "path": "Samples/Scenes"
+    }
+  ]
 }

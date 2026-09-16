@@ -13,6 +13,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Built-in and URP Xandra sample scenes (`ATF_BuiltIn.unity`, `ATF_URP.unity`), in addition to the existing HDRP `ATF.unity`.
 - Pipeline-specific materials (`Materials/HDRP`, `Materials/URP`, `Materials/BuiltIn`) and CoreRP character shaders so the sample runs without the HDRP package.
 - Editor import gate that hides HDRP Shader Graphs when HDRP is not installed.
+- `SumeruAI → Samples` menu and a Package Manager sample that copy scenes into `Assets`, so Git installs can open them (package folders are read-only).
 
 ### Changed
 
